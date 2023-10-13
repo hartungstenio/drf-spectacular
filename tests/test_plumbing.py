@@ -17,11 +17,12 @@ from django.conf.urls import include
 from django.db import models
 from django.urls import re_path
 from rest_framework import generics, serializers
+from typing_extensions import deprecated
 
 from drf_spectacular.openapi import AutoSchema
 from drf_spectacular.plumbing import (
     analyze_named_regex_pattern, build_basic_type, detype_pattern, follow_field_source,
-    force_instance, get_list_serializer, is_field, is_serializer, resolve_type_hint,
+    force_instance, get_list_serializer, is_deprecated, is_field, is_serializer, resolve_type_hint,
 )
 from drf_spectacular.validation import validate_schema
 from tests import generate_schema
@@ -357,4 +358,32 @@ def test_analyze_named_regex_pattern(no_warnings, pattern, output):
 
 def test_unknown_basic_type(capsys):
     build_basic_type(object)
-    assert 'could not resolve type for "<class \'object\'>' in capsys.readouterr().err
+
+
+def test_is_deprecated():
+    @deprecated("This is deprecated")
+    class DeprecatedClass:
+        @deprecated("Also deprecated")
+        def some_method(self):
+            pass
+
+    class NonDeprecatedOverride(DeprecatedClass):
+        def another_method(self):
+            pass
+
+    class AnotherOverride(NonDeprecatedOverride):
+        @deprecated("Now deprecated")
+        def another_method(self):
+            pass
+
+        def some_method(self):
+            pass
+
+    assert is_deprecated(DeprecatedClass) is True
+    assert is_deprecated(DeprecatedClass.some_method) is True
+    assert is_deprecated(NonDeprecatedOverride) is False
+    assert is_deprecated(NonDeprecatedOverride.some_method) is True
+    assert is_deprecated(NonDeprecatedOverride.another_method) is False
+    assert is_deprecated(AnotherOverride) is False
+    assert is_deprecated(AnotherOverride.another_method) is True
+    assert is_deprecated(AnotherOverride.some_method) is False

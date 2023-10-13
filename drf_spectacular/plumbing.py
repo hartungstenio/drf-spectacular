@@ -948,6 +948,13 @@ def is_versioning_supported(versioning_class):
     ))
 
 
+def is_deprecated(obj):
+    try:
+        return "__deprecated__" in obj.__dict__
+    except AttributeError:
+        return hasattr(obj, "__deprecated__")
+
+
 def operation_matches_version(view, requested_version):
     try:
         version, _ = view.determine_version(view.request, **view.kwargs)
